@@ -27,6 +27,8 @@ export default function App() {
     loading,
     error,
     search,
+    locating,
+    useMyLocation,
   } = useWeather();
 
   return (
@@ -52,6 +54,17 @@ export default function App() {
             {loading ? "Buscando..." : "Buscar"}
           </button>
         </form>
+        <div className="mt-3 flex gap-3">
+          <button
+            type="button"
+            onClick={useMyLocation}
+            disabled={loading || locating}
+            className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2 font-semibold hover:bg-slate-700 disabled:opacity-60"
+          >
+            {locating ? "Localizando..." : "Usar minha localização 📍"}
+          </button>
+        </div>
+
 
         {!loading && !error && !weather && (
           <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-800/30 p-6 text-slate-300">

@@ -1,5 +1,6 @@
 import type { City, WeatherResponse } from "../types/weather";
 
+
 type Props = {
     city: City;
     weather: WeatherResponse;
