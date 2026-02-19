@@ -38,7 +38,8 @@ export default function WeatherCard({ city, weather }: Props) {
     const visual = getWeatherVisual(weather.current.weather_code);
 
     return (
-        <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-800/50 p-6">
+        <div className="mt-6 rounded-2xl border border-slate-200 bg-white/70 p-6 shadow-md backdrop-blur
+                dark:border-slate-800 dark:bg-slate-950/40">
             <div className="flex items-start justify-between gap-4">
                 <div>
                     <h2 className="text-xl font-bold">
@@ -68,11 +69,13 @@ export default function WeatherCard({ city, weather }: Props) {
                 Próximos 5 dias
             </h3>
 
-            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5 ">
                 {weather.daily.time.slice(0, 5).map((day, i) => (
                     <div
                         key={day}
-                        className="rounded-xl border border-slate-700 bg-slate-900/40 p-3 text-center"
+                        className="rounded-xl border border-slate-200 bg-white p-3 text-center
+                        dark:border-slate-800 dark:bg-slate-900/60"
+
                     >
                         <p className="text-sm font-semibold">{formatDay(day)}</p>
 
