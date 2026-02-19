@@ -1,17 +1,13 @@
-import { useMemo, useState } from "react";
 import WeatherCard from "./components/WeatherCard";
-import { fetchWeather, searchCity } from "./services/weatherService";
-import type { City, WeatherResponse } from "./types/weather";
+import { useWeather } from "./hooks/UseWeather";
 
 function Skeleton() {
   return (
     <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-800/50 p-6 animate-pulse">
       <div className="h-6 w-1/3 rounded bg-slate-700" />
       <div className="mt-3 h-4 w-1/4 rounded bg-slate-700" />
-
       <div className="mt-6 h-10 w-1/2 rounded bg-slate-700" />
       <div className="mt-2 h-4 w-1/3 rounded bg-slate-700" />
-
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
         {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="h-24 rounded-xl bg-slate-700" />
@@ -22,36 +18,16 @@ function Skeleton() {
 }
 
 export default function App() {
-  const [query, setQuery] = useState("");
-  const [city, setCity] = useState<City | null>(null);
-  const [weather, setWeather] = useState<WeatherResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const canSearch = useMemo(() => query.trim().length >= 2, [query]);
-
-  async function handleSearch(e?: React.FormEvent) {
-    e?.preventDefault();
-    if (!canSearch || loading) return;
-
-    setLoading(true);
-    setError("");
-    setWeather(null);
-
-    try {
-      const foundCity = await searchCity(query.trim());
-      setCity(foundCity);
-
-      const weatherData = await fetchWeather(foundCity);
-      setWeather(weatherData);
-    } catch (err) {
-      setCity(null);
-      if (err instanceof Error) setError(err.message);
-      else setError("Erro inesperado.");
-    } finally {
-      setLoading(false);
-    }
-  }
+  const {
+    query,
+    setQuery,
+    canSearch,
+    city,
+    weather,
+    loading,
+    error,
+    search,
+  } = useWeather();
 
   return (
     <div className="min-h-screen bg-slate-900 text-white p-6">
@@ -61,7 +37,7 @@ export default function App() {
           Busque uma cidade e veja temperatura atual + previsão de 5 dias.
         </p>
 
-        <form onSubmit={handleSearch} className="mt-6 flex gap-3">
+        <form onSubmit={search} className="mt-6 flex gap-3">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
