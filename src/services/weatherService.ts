@@ -34,9 +34,10 @@ export async function fetchWeather(city: City): Promise<WeatherResponse> {
     const url =
         `https://api.open-meteo.com/v1/forecast` +
         `?latitude=${city.latitude}&longitude=${city.longitude}` +
-        `&current=temperature_2m,wind_speed_10m` +
+        `&current=temperature_2m,wind_speed_10m,weather_code` +
         `&daily=temperature_2m_max,temperature_2m_min` +
         `&timezone=${encodeURIComponent(city.timezone)}`;
+
 
     const res = await fetch(url);
     if (!res.ok) {
