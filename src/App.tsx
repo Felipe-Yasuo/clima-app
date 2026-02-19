@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { searchCity, fetchWeather } from "./services/weatherService";
 import type { City, WeatherResponse } from "./types/weather";
+import WeatherCard from "./components/WeatherCard";
+
 
 export default function App() {
   const [query, setQuery] = useState("");
@@ -62,20 +64,9 @@ export default function App() {
         )}
 
         {city && weather && !loading && (
-          <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-800/50 p-6">
-            <h2 className="text-xl font-bold">
-              {city.name}, {city.country}
-            </h2>
-
-            <p className="mt-2 text-3xl font-bold">
-              {Math.round(weather.current.temperature_2m)}°C
-            </p>
-
-            <p className="text-slate-400">
-              Vento: {Math.round(weather.current.wind_speed_10m)} km/h
-            </p>
-          </div>
+          <WeatherCard city={city} weather={weather} />
         )}
+
       </div>
     </div>
   );
