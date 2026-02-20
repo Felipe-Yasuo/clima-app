@@ -31,6 +31,8 @@ export default function App() {
     search,
     locating,
     useMyLocation,
+    history,
+    searchFromHistory,
   } = useWeather();
 
   return (
@@ -85,7 +87,28 @@ export default function App() {
               {loading ? "Buscando..." : "Buscar"}
             </button>
           </form>
+          {history.length > 0 && (
+            <div className="mt-5">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Últimas buscas:
+              </p>
 
+              <div className="mt-2 flex flex-wrap gap-2">
+                {history.map((h) => (
+                  <button
+                    key={`${h.name}-${h.country ?? ""}-${h.latitude ?? ""}-${h.longitude ?? ""}`}
+                    type="button"
+                    onClick={() => searchFromHistory(h)}
+                    className="rounded-full border border-slate-200 bg-white px-3 py-1 text-sm font-semibold hover:bg-slate-50
+                     dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-900"
+                  >
+                    {h.name}
+                    {h.country ? ` • ${h.country}` : ""}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="mt-4 flex flex-wrap gap-3">
             <button
               type="button"

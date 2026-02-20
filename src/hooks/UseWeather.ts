@@ -1,22 +1,51 @@
 import { useMemo, useState } from "react";
-import {
-    fetchWeather,
-    fetchWeatherByCoords,
-    searchCity,
-} from "../services/weatherService";
-
+import { fetchWeather, fetchWeatherByCoords, searchCity } from "../services/weatherService";
+import type { HistoryItem } from "../types/history";
 import type { City, WeatherResponse } from "../types/weather";
+
+const HISTORY_KEY = "weather_search_history";
+const HISTORY_LIMIT = 5;
 
 export function useWeather() {
     const [query, setQuery] = useState("");
     const [city, setCity] = useState<City | null>(null);
     const [weather, setWeather] = useState<WeatherResponse | null>(null);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
     const [locating, setLocating] = useState(false);
+    const [error, setError] = useState("");
 
+    const [history, setHistory] = useState<HistoryItem[]>(() => {
+        const raw = localStorage.getItem(HISTORY_KEY);
+        if (!raw) return [];
+        try {
+            const parsed = JSON.parse(raw) as HistoryItem[];
+            return Array.isArray(parsed) ? parsed.slice(0, HISTORY_LIMIT) : [];
+        } catch {
+            return [];
+        }
+    });
 
     const canSearch = useMemo(() => query.trim().length >= 2, [query]);
+
+    function persistHistory(next: HistoryItem[]) {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+    }
+
+    function addToHistory(item: HistoryItem) {
+        setHistory((prev) => {
+            const filtered = prev.filter(
+                (h) =>
+                    !(
+                        h.name.toLowerCase() === item.name.toLowerCase() &&
+                        (h.country || "").toLowerCase() === (item.country || "").toLowerCase()
+                    )
+            );
+
+            const next = [item, ...filtered].slice(0, HISTORY_LIMIT);
+            persistHistory(next);
+            return next;
+        });
+    }
 
     async function search(e?: React.FormEvent) {
         e?.preventDefault();
@@ -30,10 +59,18 @@ export function useWeather() {
             const foundCity = await searchCity(query.trim());
             setCity(foundCity);
 
+            addToHistory({
+                name: foundCity.name,
+                country: foundCity.country,
+                latitude: foundCity.latitude,
+                longitude: foundCity.longitude,
+            });
+
             const weatherData = await fetchWeather(foundCity);
             setWeather(weatherData);
         } catch (err) {
             setCity(null);
+            setWeather(null);
             if (err instanceof Error) setError(err.message);
             else setError("Erro inesperado.");
         } finally {
@@ -47,9 +84,10 @@ export function useWeather() {
         setWeather(null);
         setError("");
         setLoading(false);
+        setLocating(false);
     }
 
-    async function useMyLocation() {
+    function useMyLocation() {
         if (!navigator.geolocation) {
             setError("Seu navegador não suporta geolocalização.");
             return;
@@ -65,7 +103,7 @@ export function useWeather() {
                 try {
                     const { latitude, longitude } = pos.coords;
 
-                    const cityFallback = {
+                    const cityFallback: City = {
                         name: "Minha localização",
                         country: "",
                         latitude,
@@ -75,11 +113,18 @@ export function useWeather() {
 
                     setCity(cityFallback);
 
+                    addToHistory({
+                        name: cityFallback.name,
+                        country: cityFallback.country,
+                        latitude,
+                        longitude,
+                    });
+
                     const w = await fetchWeatherByCoords(latitude, longitude, "auto");
                     setWeather(w);
-
                 } catch (err) {
                     setCity(null);
+                    setWeather(null);
                     if (err instanceof Error) setError(err.message);
                     else setError("Erro inesperado ao usar localização.");
                 } finally {
@@ -90,8 +135,9 @@ export function useWeather() {
             (geoErr) => {
                 setLoading(false);
                 setLocating(false);
+                setCity(null);
+                setWeather(null);
 
-                // mensagens amigáveis
                 if (geoErr.code === 1) setError("Permissão negada para acessar localização.");
                 else if (geoErr.code === 2) setError("Localização indisponível no momento.");
                 else if (geoErr.code === 3) setError("Tempo esgotado ao obter localização.");
@@ -101,6 +147,55 @@ export function useWeather() {
         );
     }
 
+    async function searchFromHistory(item: HistoryItem) {
+        if (!item.name) return;
+
+        setQuery(item.name);
+        setLoading(true);
+        setError("");
+        setWeather(null);
+
+        try {
+            if (item.latitude != null && item.longitude != null) {
+                const cityFallback: City = {
+                    name: item.name,
+                    country: item.country || "",
+                    latitude: item.latitude,
+                    longitude: item.longitude,
+                    timezone: "auto",
+                };
+
+                setCity(cityFallback);
+
+                const w = await fetchWeatherByCoords(item.latitude, item.longitude, "auto");
+                setWeather(w);
+
+                addToHistory(item);
+                return;
+            }
+
+
+            const foundCity = await searchCity(item.name);
+            setCity(foundCity);
+
+            addToHistory({
+                name: foundCity.name,
+                country: foundCity.country,
+                latitude: foundCity.latitude,
+                longitude: foundCity.longitude,
+            });
+
+            const w = await fetchWeather(foundCity);
+            setWeather(w);
+        } catch (err) {
+            setCity(null);
+            setWeather(null);
+            if (err instanceof Error) setError(err.message);
+            else setError("Erro inesperado.");
+        } finally {
+            setLoading(false);
+        }
+    }
 
     return {
         query,
@@ -109,12 +204,12 @@ export function useWeather() {
         city,
         weather,
         loading,
+        locating,
         error,
         search,
         reset,
-        locating,
         useMyLocation,
-
+        history,
+        searchFromHistory,
     };
 }
-
