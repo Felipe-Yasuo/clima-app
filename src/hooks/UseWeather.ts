@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { useDebounce } from "./useDebounce";
 import { fetchWeather, fetchWeatherByCoords, searchCity } from "../services/weatherService";
 import type { HistoryItem } from "../types/history";
@@ -28,6 +28,8 @@ export function useWeather() {
 
     const canSearch = useMemo(() => query.trim().length >= 2, [query]);
     const debouncedQuery = useDebounce(query, 600);
+    const lastAutoQueryRef = useRef<string>("");
+
 
     const addToHistory = useCallback((item: HistoryItem) => {
         setHistory((prev) => {
@@ -227,16 +229,22 @@ export function useWeather() {
         }
     }
 
-
     useEffect(() => {
         const name = debouncedQuery.trim();
 
         if (name.length < 2) return;
         if (loading || locating) return;
-        if (city?.name?.toLowerCase() === name.toLowerCase()) return;
+
+        if (lastAutoQueryRef.current === name.toLowerCase()) return;
+
+        lastAutoQueryRef.current = name.toLowerCase();
 
         searchAuto(name);
-    }, [debouncedQuery, city?.name, searchAuto, loading, locating]);
+    }, [debouncedQuery, loading, locating, searchAuto]);
+
+    useEffect(() => {
+        lastAutoQueryRef.current = "";
+    }, [query]);
 
     return {
         query,
