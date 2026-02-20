@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
+import { useDebounce } from "./useDebounce";
 import { fetchWeather, fetchWeatherByCoords, searchCity } from "../services/weatherService";
 import type { HistoryItem } from "../types/history";
 import type { City, WeatherResponse } from "../types/weather";
@@ -26,12 +27,9 @@ export function useWeather() {
     });
 
     const canSearch = useMemo(() => query.trim().length >= 2, [query]);
+    const debouncedQuery = useDebounce(query, 600);
 
-    function persistHistory(next: HistoryItem[]) {
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
-    }
-
-    function addToHistory(item: HistoryItem) {
+    const addToHistory = useCallback((item: HistoryItem) => {
         setHistory((prev) => {
             const filtered = prev.filter(
                 (h) =>
@@ -42,10 +40,10 @@ export function useWeather() {
             );
 
             const next = [item, ...filtered].slice(0, HISTORY_LIMIT);
-            persistHistory(next);
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
             return next;
         });
-    }
+    }, []);
 
     async function search(e?: React.FormEvent) {
         e?.preventDefault();
@@ -86,6 +84,38 @@ export function useWeather() {
         setLoading(false);
         setLocating(false);
     }
+
+    const searchAuto = useCallback(async (name: string) => {
+        if (loading || locating) return;
+        if (name.trim().length < 2) return;
+
+        setLoading(true);
+        setError("");
+        setWeather(null);
+
+        try {
+            const foundCity = await searchCity(name.trim());
+            setCity(foundCity);
+
+            addToHistory({
+                name: foundCity.name,
+                country: foundCity.country,
+                latitude: foundCity.latitude,
+                longitude: foundCity.longitude,
+            });
+
+            const weatherData = await fetchWeather(foundCity);
+            setWeather(weatherData);
+        } catch (err) {
+            setCity(null);
+            setWeather(null);
+            if (err instanceof Error) setError(err.message);
+            else setError("Erro inesperado.");
+        } finally {
+            setLoading(false);
+        }
+    }, [loading, locating, addToHistory]);
+
 
     function useMyLocation() {
         if (!navigator.geolocation) {
@@ -196,6 +226,17 @@ export function useWeather() {
             setLoading(false);
         }
     }
+
+
+    useEffect(() => {
+        const name = debouncedQuery.trim();
+
+        if (name.length < 2) return;
+        if (loading || locating) return;
+        if (city?.name?.toLowerCase() === name.toLowerCase()) return;
+
+        searchAuto(name);
+    }, [debouncedQuery, city?.name, searchAuto, loading, locating]);
 
     return {
         query,
